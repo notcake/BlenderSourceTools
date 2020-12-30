@@ -824,11 +824,12 @@ class SmdImporter(bpy.types.Operator, Logger):
 			smd.m.active_shape_key_index = 0
 		smd.m.show_only_shape_key = True # easier to view each shape, less confusion when several are active at once
 
-		def vec_round(v):
-			return Vector([round(co,3) for co in v])
+		def vec_round(v, resolution):
+			return Vector([round(co / resolution) * resolution for co in v])
 		co_map = {}
 		mesh_cos = [vert.co for vert in smd.m.data.vertices]
-		mesh_cos_rnd = None
+		mesh_cos_rnd_0_001 = None
+		mesh_cos_rnd_0_01 = None
 
 		smd.vta_ref = None
 		vta_cos = []
@@ -881,13 +882,27 @@ class SmdImporter(bpy.types.Operator, Logger):
 						try:
 							map_id = mesh_cos.index(co)
 						except ValueError:
-							if not mesh_cos_rnd:
-								mesh_cos_rnd = [vec_round(co) for co in mesh_cos]
+							pass
+
+						if map_id is None:
+							if not mesh_cos_rnd_0_001:
+								mesh_cos_rnd_0_001 = [vec_round(co, 0.001) for co in mesh_cos]
 							try:
-								map_id = mesh_cos_rnd.index(vec_round(co))
+								map_id = mesh_cos_rnd_0_001.index(vec_round(co, 0.001))
 							except ValueError:
-								bad_vta_verts.append(i)
-								continue
+								pass
+
+						if map_id is None:
+							if not mesh_cos_rnd_0_01:
+								mesh_cos_rnd_0_01 = [vec_round(co, 0.01) for co in mesh_cos]
+							try:
+								map_id = mesh_cos_rnd_0_01.index(vec_round(co, 0.01))
+							except ValueError:
+								pass
+
+						if map_id is None:
+							bad_vta_verts.append(i)
+							continue
 						co_map[id] = map_id
 					
 					bpy.data.meshes.remove(vd)
